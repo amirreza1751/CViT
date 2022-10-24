@@ -1,7 +1,7 @@
 import os
 import torch
 from torchvision import transforms, datasets
-from augmentation import Aug
+from helpers.augmentation import Aug
 
 #Install TPU environment using this code    
 #!curl install https://raw.githubusercontent.com/pytorch/xla/master/contrib/scripts/env-setup.py -o pytorch-xla-env-setup.py

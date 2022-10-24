@@ -11,13 +11,18 @@ import time
 import copy
 import pickle
 
+import torch
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
+import matplotlib.pyplot as plt
+
 sys.path.insert(1,'helpers')
 sys.path.insert(1,'model')
 sys.path.insert(1,'weight')
 
-from augmentation  import Aug
-from cvit import CViT
-from loader import session
+from helpers.augmentation  import Aug
+from model.cvit import CViT
+from helpers.loader import session
 import optparse
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -158,7 +163,6 @@ def train_tpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss):
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(epoch_loss, min_loss))
                 min_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
-
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
@@ -245,14 +249,14 @@ def train_gpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss):
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects.double() / dataset_sizes[phase]
-
+            writer.add_scalar("Acc/train", epoch_acc, epoch)
             if phase == 'train':
                 train_loss.append(epoch_loss)
                 train_accu.append(epoch_acc)
             else:
                 val_loss.append(epoch_loss)
                 val_accu.append(epoch_acc)
-
+                
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
             # deep copy the model
@@ -264,19 +268,45 @@ def train_gpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss):
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
-
+    
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    with open('weight/cvit_deepfake_detection_v2.pkl', 'wb') as f:
+    with open('/home/amirak/workspace/my-cvit/CViT/weight/deepdeepfake_cvit_gpu_ep50.pkl', 'wb') as f:
         pickle.dump([train_loss, train_accu, val_loss, val_accu], f)
 
     state = {'epoch': num_epochs+1, 
              'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(),
              'min_loss':epoch_loss}
-    torch.save(state, 'weight/cvit_deepfake_detection_v2.pth')
+    torch.save(state, '/home/amirak/workspace/my-cvit/CViT/weight/deepdeepfake_cvit_gpu_ep50.pkl')
     test(model)
+    
+    
+    
+    # summarize history for accuracy
+    f1 = plt.figure()
+    plt.plot(train_accu)
+    plt.plot(val_accu)
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.savefig( 'accu.png' )
+    # summarize history for loss
+    f2 = plt.figure()
+    plt.plot(train_loss)
+    plt.plot(val_loss)
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.savefig( 'loss.png' )
+    
+    
+    
+    
+    
     return train_loss,train_accu,val_loss,val_accu, min_loss
 
 def test(model):
@@ -302,3 +332,4 @@ if cession=='t':
     train_tpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss) #Train using TPU.
 else:
     train_gpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss) #Train using GPU.
+    writer.flush()
