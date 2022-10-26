@@ -1,1 +1,5 @@
-weight/deepdeepfake_cvit_gpu_ep50.pkl
+# exclude everything
+weight/*
+
+# exception to the rule
+!weight/.gitkeep 

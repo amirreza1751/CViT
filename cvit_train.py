@@ -11,7 +11,6 @@ import time
 import copy
 import pickle
 
-import torch
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 import matplotlib.pyplot as plt
@@ -170,14 +169,14 @@ def train_tpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss):
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    with open('weight/cvit_deepfake_detection_v2.pkl', 'wb') as f:
+    with open('/content/CViT/weight/weights.pkl', 'wb') as f:
         pickle.dump([train_loss, train_accu, val_loss, val_accu], f)
 
     state = {'epoch': num_epochs, 
              'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(),
              'min_loss':epoch_loss}
-    torch.save(state, 'weight/cvit_deepfake_detection_v2.pth')
+    torch.save(state, '/content/CViT/weight/weights.pkl')
 
     return train_loss,train_accu,val_loss,val_accu, min_loss
 
@@ -272,40 +271,34 @@ def train_gpu(model, criterion, optimizer, scheduler, num_epochs, min_val_loss):
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    with open('/home/amirak/workspace/my-cvit/CViT/weight/deepdeepfake_cvit_gpu_ep50.pkl', 'wb') as f:
+    with open('/content/CViT/weight/weights.pkl', 'wb') as f:
         pickle.dump([train_loss, train_accu, val_loss, val_accu], f)
 
     state = {'epoch': num_epochs+1, 
              'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(),
              'min_loss':epoch_loss}
-    torch.save(state, '/home/amirak/workspace/my-cvit/CViT/weight/deepdeepfake_cvit_gpu_ep50.pkl')
+    torch.save(state, '/content/CViT/weight/weights.pkl')
     test(model)
-    
-    
-    
+
     # summarize history for accuracy
     f1 = plt.figure()
-    plt.plot(train_accu)
-    plt.plot(val_accu)
+    plt.plot([*range(0, num_epochs, 1)], [i.cpu().numpy() for i in train_accu])
+    plt.plot([*range(0, num_epochs, 1)], [i.cpu().numpy() for i in val_accu])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.savefig( 'accu.png' )
-    # summarize history for loss
+    # # summarize history for loss
     f2 = plt.figure()
-    plt.plot(train_loss)
-    plt.plot(val_loss)
+    plt.plot([*range(0, num_epochs, 1)], train_loss)
+    plt.plot([*range(0, num_epochs, 1)], val_loss)
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.savefig( 'loss.png' )
-    
-    
-    
-    
     
     return train_loss,train_accu,val_loss,val_accu, min_loss
 
